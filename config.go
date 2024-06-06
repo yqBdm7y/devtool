@@ -11,9 +11,10 @@ import (
 type InterfaceConfig interface {
 	Init()
 	GetIntWithDefault(key string, default_value int) int
-	GetString(key string) string
 	GetStringWithDefault(key, default_value string) string
 	GetStringMap(key string) map[string]interface{}
+	GetBool(key string) bool
+	Set(key string, value interface{}) error
 }
 
 var (
@@ -94,4 +95,14 @@ func (l LibraryViper) GetStringWithDefault(key, default_value string) string {
 // Get string map
 func (l LibraryViper) GetStringMap(key string) map[string]interface{} {
 	return Config[LibraryViper]{}.Get().Viper.GetStringMap(key)
+}
+
+// Get string map
+func (l LibraryViper) GetBool(key string) bool {
+	return Config[LibraryViper]{}.Get().Viper.GetBool(key)
+}
+
+func (l LibraryViper) Set(key string, value interface{}) error {
+	Config[LibraryViper]{}.Get().Viper.Set(key, value)
+	return Config[LibraryViper]{}.Get().Viper.WriteConfig()
 }

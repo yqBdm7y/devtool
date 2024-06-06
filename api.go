@@ -30,11 +30,16 @@ func (a Api[T]) Init(conf T) {
 }
 
 // Get the initialized interface. If it is not initialized, Turnstile library is used by default.
+// Example:
+// api := d.Api[d.LibraryApi]{}.Get()
+// api.Response.Data = map[string]string{ "token":  token }
 func (a Api[T]) Get() T {
 	if api == nil {
-		LibraryTurnstile{}.Init()
+		LibraryApi{}.Init()
 	}
-	return captcha.(T)
+	// Value copy, changing the value will not affect the original value
+	v, _ := api.(T)
+	return v
 }
 
 // Api library
@@ -48,6 +53,11 @@ type library_api_response struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
 	Error   interface{} `json:"error"`
+}
+
+// Initialization
+func (l LibraryApi) Init() {
+	Api[LibraryApi]{}.Init(LibraryApi{})
 }
 
 // Returns the structure of a successful response

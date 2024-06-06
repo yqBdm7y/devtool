@@ -54,8 +54,8 @@ type LibraryTurnstile struct {
 // Initialization
 func (l LibraryTurnstile) Init() {
 	Captcha[LibraryTurnstile]{}.Init(LibraryTurnstile{
-		Secret: Config[InterfaceConfig]{}.Get().GetString(ConfigPathCaptchaSecret),
-		Url:    Config[InterfaceConfig]{}.Get().GetString(ConfigPathCaptchaUrl),
+		Secret: Config[InterfaceConfig]{}.Get().GetStringWithDefault(ConfigPathCaptchaSecret, ""),
+		Url:    Config[InterfaceConfig]{}.Get().GetStringWithDefault(ConfigPathCaptchaUrl, ""),
 	})
 }
 

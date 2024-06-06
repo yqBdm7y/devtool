@@ -21,6 +21,7 @@ const (
 	ConfigPathDatabaseUser                = "database.user"
 	ConfigPathDatabasePassword            = "database.password"
 	ConfigPathTimeoutReconnectionInterval = "database.timeout_reconnection_interval"
+	ConfigPathInsertInitializationData    = "database.insert_initialization_data"
 )
 
 var (
@@ -53,10 +54,10 @@ type LibraryGorm struct {
 // Initialization
 func (l LibraryGorm) Init() {
 	if l.OpenDsn == "" {
-		dbHost := Config[InterfaceConfig]{}.Get().GetString(ConfigPathDatabaseHost)
-		dbName := Config[InterfaceConfig]{}.Get().GetString(ConfigPathDatabaseName)
-		dbUser := Config[InterfaceConfig]{}.Get().GetString(ConfigPathDatabaseUser)
-		dbPassword := Config[InterfaceConfig]{}.Get().GetString(ConfigPathDatabasePassword)
+		dbHost := Config[InterfaceConfig]{}.Get().GetStringWithDefault(ConfigPathDatabaseHost, "")
+		dbName := Config[InterfaceConfig]{}.Get().GetStringWithDefault(ConfigPathDatabaseName, "")
+		dbUser := Config[InterfaceConfig]{}.Get().GetStringWithDefault(ConfigPathDatabaseUser, "")
+		dbPassword := Config[InterfaceConfig]{}.Get().GetStringWithDefault(ConfigPathDatabasePassword, "")
 		l.OpenDsn = dbUser + ":" + dbPassword + "@tcp(" + dbHost + ")/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
 	}
 	if l.Open == nil {
@@ -91,6 +92,57 @@ func (l LibraryGorm) GenerateFuzzyQueries(tx *gorm.DB, fields map[string]string)
 	return tx, nil
 }
 
+// Paginate
+// https://gorm.io/docs/scopes.html#Pagination
+func (l LibraryGorm) PaginateV2(r *http.Request) func(db *gorm.DB) (page, page_size int) {
+	return func(db *gorm.DB) (page, page_size int) {
+
+		q := r.URL.Query()
+
+		page, _ = strconv.Atoi(q.Get(FieldNamePaginationPage))
+		if page <= 0 {
+			page = 1
+		}
+
+		page_size, _ = strconv.Atoi(q.Get(FieldNamePaginationPageSize))
+		switch {
+		case page_size > 100:
+			page_size = 100
+		case page_size <= 0:
+			page_size = 10
+		}
+
+		offset := (page - 1) * page_size
+		db.Offset(offset).Limit(page_size)
+		return page, page_size
+	}
+}
+
+// Insert initialization data
+func (l LibraryGorm) InsertInitializationData(list ...interface{}) error {
+	b := Config[InterfaceConfig]{}.Get().GetBool(ConfigPathInsertInitializationData)
+	// No need to insert data if the InsertInitializationData config is false
+	if !b {
+		return nil
+	}
+
+	err := Database[LibraryGorm]{}.Get().DB.Transaction(func(tx *gorm.DB) error {
+		for _, v := range list {
+			result := tx.Create(v)
+			if result.Error != nil {
+				return result.Error
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	// Once the initialization data is inserted, modify the configuration to false to prevent the next misoperation
+	return Config[InterfaceConfig]{}.Get().Set(ConfigPathInsertInitializationData, false)
+}
+
+// Deprecated: Use PaginateV2 instead, PaginateV2 returns the page and page size used, more flexible
 // Paginate
 // https://gorm.io/docs/scopes.html#Pagination
 func (l LibraryGorm) Paginate(r *http.Request) func(db *gorm.DB) *gorm.DB {

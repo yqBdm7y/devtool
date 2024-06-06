@@ -32,7 +32,9 @@ func (p Pagination[T]) Get() T {
 	if pagination == nil {
 		LibraryPagination{}.Init()
 	}
-	return pagination.(T)
+	// Value copy, changing the value will not affect the original value
+	v, _ := pagination.(T)
+	return v
 }
 
 // Pagination library
