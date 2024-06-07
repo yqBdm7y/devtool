@@ -102,6 +102,7 @@ func (l LibraryApi) IsErrorResponse() bool {
 // API interceptor, modify the returned fields
 func (l LibraryApi) ModifyApiFieldName(data interface{}) (interface{}, error) {
 	fieldMap := Config[InterfaceConfig]{}.Get().GetStringMap(ConfigPathApiField)
+	// If the user does not define the interceptor mapping field, the original value is returned
 	if len(fieldMap) == 0 {
 		return data, nil
 	}

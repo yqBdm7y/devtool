@@ -1,25 +1,5 @@
 package d
 
-import (
-	"crypto/rand"
-	"encoding/base64"
-)
-
-// Example: u := d.ChangeType(usr, func(du database.User, mu *User) { mu.User = du })
-func ChangeType[D, M any](database_value D, to_model_func func(D, *M)) M {
-	var m M
-	to_model_func(database_value, &m)
-	return m
-}
-
-func ChangeTypeList[D, M any](database_list []D, to_model_func func(D, *M)) []M {
-	var arr = []M{}
-	for _, v := range database_list {
-		arr = append(arr, ChangeType[D, M](v, to_model_func))
-	}
-	return arr
-}
-
 // Tree
 type TreeInterface[T any] interface {
 	IsTop() bool
@@ -91,16 +71,4 @@ func FilterLeafNode[T any](slice []T, get_id func(T) int, get_parent_id func(T) 
 	}
 
 	return leafNodes
-}
-
-// Used to generate random strings
-// Example: randomKey, err := GenerateRandomString(32)
-// Return value example: tFredJ-Ii5Eh0hQAHaJXSSz8Ffd7S6xTY2s-ZMxOLCM=
-func GenerateRandomString(length int) (string, error) {
-	key := make([]byte, length)
-	_, err := rand.Read(key)
-	if err != nil {
-		return "", err
-	}
-	return base64.URLEncoding.EncodeToString(key), nil
 }

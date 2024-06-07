@@ -12,55 +12,53 @@ import (
 	"gorm.io/gorm"
 )
 
-type Gin struct {
-	Context *gin.Context
-}
+type Gin struct{}
 
 // Returns a successful response in gin format
-func (g Gin) Success(a InterfaceApi) {
+func (g Gin) Success(c *gin.Context, a InterfaceApi) {
 	// If gin.Context is nil
-	if g.Context == nil {
+	if c == nil {
 		return
 	}
-	g.Context.JSON(http.StatusOK, a.Success())
+	c.JSON(http.StatusOK, a.Success())
 }
 
 // Returns an error response in gin format
-func (g Gin) Error(a InterfaceApi) {
+func (g Gin) Error(c *gin.Context, a InterfaceApi) {
 	// If gin.Context is nil
-	if g.Context == nil {
+	if c == nil {
 		return
 	}
-	g.Context.JSON(http.StatusOK, a.Error())
+	c.JSON(http.StatusOK, a.Error())
 }
 
 // Returns a pagination response in gin format
-func (g Gin) Pagination(a InterfaceApi, p InterfacePagination) {
+func (g Gin) Pagination(c *gin.Context, a InterfaceApi, p InterfacePagination) {
 	// If gin.Context is nil
-	if g.Context == nil {
+	if c == nil {
 		return
 	}
-	g.Context.JSON(http.StatusOK, a.Pagination(p))
+	c.JSON(http.StatusOK, a.Pagination(p))
 }
 
 // Returns data or error response in gin format
-func (g Gin) DataOrError(a InterfaceApi) {
+func (g Gin) DataOrError(c *gin.Context, a InterfaceApi) {
 	// If gin.Context is nil
-	if g.Context == nil {
+	if c == nil {
 		return
 	}
 	if a.IsErrorResponse() {
-		g.Error(a)
+		g.Error(c, a)
 	} else {
-		g.Success(a)
+		g.Success(c, a)
 	}
 }
 
 // Generate lazy query parameters based on parameters and value
 // Example : GenerateFuzzyQuery(GORM_DB_QUERY, []string{"name", "sex"})
-func (g Gin) GenerateFuzzyQuery(tx *gorm.DB, fields []string) (*gorm.DB, error) {
+func (g Gin) GenerateFuzzyQuery(c *gin.Context, tx *gorm.DB, fields []string) (*gorm.DB, error) {
 	// If gin.Context is nil
-	if g.Context == nil {
+	if c == nil {
 		return nil, errors.New("gin.Context is nil")
 	}
 	// If fields is nil,no error will be reported and the original value will be returned
@@ -70,7 +68,7 @@ func (g Gin) GenerateFuzzyQuery(tx *gorm.DB, fields []string) (*gorm.DB, error) 
 
 	var m = make(map[string]string)
 	for _, v := range fields {
-		m[v] = g.Context.Query(v)
+		m[v] = c.Query(v)
 	}
 
 	var gorm LibraryGorm
@@ -83,13 +81,13 @@ func (g Gin) GenerateFuzzyQuery(tx *gorm.DB, fields []string) (*gorm.DB, error) 
 // dg := d.Gin{Context: c}
 // var data []database.Supplier
 // p, err := dg.GetListWithFuzzyQuery(query, nil, &data)
-func (g Gin) GetListWithFuzzyQuery(query *gorm.DB, fuzzy_query_field_name []string, data_list_pointer interface{}) (p InterfacePagination, err error) {
+func (g Gin) GetListWithFuzzyQuery(c *gin.Context, query *gorm.DB, fuzzy_query_field_name []string, data_list_pointer interface{}) (p InterfacePagination, err error) {
 	// If gin.Context is nil
-	if g.Context == nil {
+	if c == nil {
 		return p, errors.New("gin.Context is nil")
 	}
 
-	tx, err := g.GenerateFuzzyQuery(query, fuzzy_query_field_name)
+	tx, err := g.GenerateFuzzyQuery(c, query, fuzzy_query_field_name)
 	if err != nil {
 		return p, err
 	}
@@ -97,17 +95,17 @@ func (g Gin) GetListWithFuzzyQuery(query *gorm.DB, fuzzy_query_field_name []stri
 	var total int64
 	tx.Count(&total)
 	// Generate paginated data
-	f := LibraryGorm{}.Paginate(g.Context.Request)
+	f := LibraryGorm{}.Paginate(c.Request)
 	result := f(tx).Find(data_list_pointer)
 	if result.Error != nil {
 		return p, result.Error
 	}
 
-	page, err := strconv.Atoi(g.Context.Query(FieldNamePaginationPage))
+	page, err := strconv.Atoi(c.Query(FieldNamePaginationPage))
 	if err != nil {
 		page = 1
 	}
-	pageSize, err := strconv.Atoi(g.Context.Query(FieldNamePaginationPageSize))
+	pageSize, err := strconv.Atoi(c.Query(FieldNamePaginationPageSize))
 	if err != nil {
 		pageSize = 20
 	}
