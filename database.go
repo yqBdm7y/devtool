@@ -119,14 +119,14 @@ func (l LibraryGorm) PaginateV2(r *http.Request) func(db *gorm.DB) (page, page_s
 }
 
 // Insert initialization data
-func (l LibraryGorm) InsertInitializationData(list ...interface{}) error {
+func (l LibraryGorm) InsertInitializationData(list ...interface{}) (initialized bool, err error) {
 	b := Config[InterfaceConfig]{}.Get().GetBool(ConfigPathInsertInitializationData)
 	// No need to insert data if the InsertInitializationData config is false
 	if !b {
-		return nil
+		return false, nil
 	}
 
-	err := Database[LibraryGorm]{}.Get().DB.Transaction(func(tx *gorm.DB) error {
+	err = Database[LibraryGorm]{}.Get().DB.Transaction(func(tx *gorm.DB) error {
 		for _, v := range list {
 			result := tx.Create(v)
 			if result.Error != nil {
@@ -136,10 +136,10 @@ func (l LibraryGorm) InsertInitializationData(list ...interface{}) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return true, err
 	}
 	// Once the initialization data is inserted, modify the configuration to false to prevent the next misoperation
-	return Config[InterfaceConfig]{}.Get().Set(ConfigPathInsertInitializationData, false)
+	return true, Config[InterfaceConfig]{}.Get().Set(ConfigPathInsertInitializationData, false)
 }
 
 // Deprecated: Use PaginateV2 instead, PaginateV2 returns the page and page size used, more flexible
