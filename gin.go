@@ -118,16 +118,15 @@ func (g Gin) GetListWithFuzzyQuery(c *gin.Context, query *gorm.DB, fuzzy_query_f
 // API request interceptor in GIN, modify the returned fields
 func (g Gin) ModifyApiFieldName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.Method != http.MethodPost && c.Request.Method != http.MethodPut {
-			c.Next()
-			return
-		}
-
+		// Get custom field map
 		m := Config[InterfaceConfig]{}.Get().GetStringMap(ConfigPathApiField)
 		if len(m) == 0 {
 			c.Next()
 			return
 		}
+
+		// Edit Query Keys
+		g.editQueryKeys(c, m)
 
 		if c.Request.Body == nil {
 			c.Next()
@@ -174,6 +173,18 @@ func (g Gin) recursionReplaceRequestKeys(bodyMap, fieldMap map[string]interface{
 					delete(bodyMap, key)
 				}
 			}
+		}
+	}
+}
+
+// Edit Query Keys
+func (g Gin) editQueryKeys(c *gin.Context, fieldMap map[string]interface{}) {
+	for k, v := range fieldMap {
+		if subValue, ok := c.GetQuery(v.(string)); ok {
+			urlValue := c.Request.URL.Query()
+			urlValue.Set(k, subValue)
+			urlValue.Del(v.(string))
+			c.Request.URL.RawQuery = urlValue.Encode()
 		}
 	}
 }
